@@ -47,37 +47,16 @@ export function MergeDialog({
     phone: [],
   });
 
-  // Initialize when dialog opens
-  useEffect(() => {
-    if (open && contacts.length > 0) {
-      // Include all contacts by default
-      setIncludedContacts(new Set(contacts.map(c => c.id)));
-      
-      // Pre-select values from the most recently active contact
-      const mostRecent = [...contacts].sort((a, b) => {
-        const aTime = a.lastActivity?.getTime() || 0;
-        const bTime = b.lastActivity?.getTime() || 0;
-        return bTime - aTime;
-      })[0];
-      
-      setSelectedValues({
-        name: mostRecent.name,
-        email: mostRecent.email ? [mostRecent.email] : [],
-        company: mostRecent.company || '',
-        jobTitle: mostRecent.jobTitle || '',
-        phone: mostRecent.phone ? [mostRecent.phone] : [],
-      });
-    }
-  }, [open, contacts]);
-
   // Get unique values for each field from included contacts only
-  const getUniqueValues = (field: keyof Contact) => {
+  const getUniqueValues = (field: keyof Contact, contactsToCheck?: Contact[], includedIds?: Set<string>) => {
     const seen = new Set<string>();
     const values: string[] = [];
+    const checkContacts = contactsToCheck || contacts;
+    const checkIncluded = includedIds || includedContacts;
     
-    contacts.forEach(contact => {
+    checkContacts.forEach(contact => {
       // Only include values from contacts that are included in merge
-      if (!includedContacts.has(contact.id)) return;
+      if (!checkIncluded.has(contact.id)) return;
       
       const value = contact[field];
       if (value && typeof value === 'string') {
@@ -90,6 +69,32 @@ export function MergeDialog({
     
     return values;
   };
+
+  // Initialize when dialog opens
+  useEffect(() => {
+    if (open && contacts.length > 0) {
+      // Include all contacts by default
+      const allContactIds = new Set(contacts.map(c => c.id));
+      setIncludedContacts(allContactIds);
+      
+      // Get unique values for each field
+      const uniqueNames = getUniqueValues('name', contacts, allContactIds);
+      const uniqueEmails = getUniqueValues('email', contacts, allContactIds);
+      const uniqueCompanies = getUniqueValues('company', contacts, allContactIds);
+      const uniqueJobTitles = getUniqueValues('jobTitle', contacts, allContactIds);
+      const uniquePhones = getUniqueValues('phone', contacts, allContactIds);
+      
+      // Pre-select the first unique value for each field
+      // This ensures consistent behavior - always selects the first option shown
+      setSelectedValues({
+        name: uniqueNames[0] || '',
+        email: uniqueEmails.length > 0 ? [uniqueEmails[0]] : [],
+        company: uniqueCompanies[0] || '',
+        jobTitle: uniqueJobTitles[0] || '',
+        phone: uniquePhones.length > 0 ? [uniquePhones[0]] : [],
+      });
+    }
+  }, [open, contacts]);
 
   // Validate selected values when included contacts change
   useEffect(() => {
