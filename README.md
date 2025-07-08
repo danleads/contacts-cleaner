@@ -1,4 +1,4 @@
-# Sedna Contacts Cleaner
+# Contacts Cleaner
 
 A modern, user-friendly application for maintaining clean and accurate contact information in your address book. Built with Next.js, TypeScript, and shadcn/ui.
 

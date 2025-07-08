@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sedna Contacts Cleaner",
+  title: "Contacts Cleaner",
   description: "Maintain a single source of truth for your contacts by cleaning duplicates and fixing invalid emails",
 };
 
