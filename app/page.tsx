@@ -1,103 +1,198 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from 'react';
+import { useContacts } from '@/hooks/use-contacts';
+import { ContactsList } from '@/components/contacts-list';
+import { MergeDialog } from '@/components/merge-dialog';
+import { EditContactDialog } from '@/components/edit-contact-dialog';
+import { Button } from '@/components/ui/button';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Contact } from '@/lib/types';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const {
+    problematicContacts,
+    isLoading,
+    updateContact,
+    deleteContacts,
+    mergeContacts,
+    clearProblems,
+    resetToSampleData,
+  } = useContacts();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const { toast } = useToast();
+  
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleMerge = (contactIds: string[]) => {
+    const contactsToMerge = problematicContacts.filter(c => contactIds.includes(c.id));
+    setSelectedContactIds(contactIds);
+    setShowMergeDialog(true);
+  };
+
+  const handleMergeConfirm = (primaryId: string, mergedIds: string[], mergedData: Partial<Contact>, excludedIds: string[]) => {
+    mergeContacts(primaryId, mergedIds, mergedData);
+    
+    // Remove excluded contacts from the problems list
+    if (excludedIds.length > 0) {
+      clearProblems(excludedIds);
+    }
+    
+    toast({
+      title: "Contacts merged successfully",
+      description: `${mergedIds.length + 1} contacts have been merged into one.${excludedIds.length > 0 ? ` ${excludedIds.length} contact(s) marked as reviewed.` : ''}`,
+    });
+    setShowMergeDialog(false);
+  };
+
+  const handleDelete = (contactIds: string[]) => {
+    setSelectedContactIds(contactIds);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteContacts(selectedContactIds);
+    toast({
+      title: "Contacts deleted",
+      description: `${selectedContactIds.length} contact(s) have been removed.`,
+    });
+    setShowDeleteConfirm(false);
+  };
+
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact);
+  };
+
+  const handleEditSave = (id: string, updates: Partial<Contact>) => {
+    updateContact(id, updates);
+    toast({
+      title: "Contact updated",
+      description: "The email address has been fixed successfully.",
+    });
+    setEditingContact(null);
+  };
+
+  const handleReset = () => {
+    resetToSampleData();
+    toast({
+      title: "Data reset",
+      description: "Sample data has been restored.",
+    });
+  };
+
+  const selectedContactsToMerge = problematicContacts.filter(c => selectedContactIds.includes(c.id));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading contacts...</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background">
+      <div className="container mx-auto py-8 px-4">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold">Sedna Contacts Cleaner</h1>
+              <p className="text-muted-foreground mt-2">
+                Maintain a single source of truth for your contacts
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Reset to Sample Data
+            </Button>
+          </div>
+          
+          {problematicContacts.length === 0 ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mt-8">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+                <div>
+                  <h2 className="text-lg font-semibold text-green-900">All Clean!</h2>
+                  <p className="text-green-700 mt-1">
+                    Your address book is in perfect shape. No duplicates or invalid emails found.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <p className="text-amber-800">
+                  <strong>{problematicContacts.length} contacts</strong> require your attention. 
+                  Review and resolve the issues below to maintain a clean address book.
+                </p>
+              </div>
+              
+              <ContactsList
+                contacts={problematicContacts}
+                onMerge={handleMerge}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Merge Dialog */}
+      <MergeDialog
+        open={showMergeDialog}
+        onOpenChange={setShowMergeDialog}
+        contacts={selectedContactsToMerge}
+        onMerge={handleMergeConfirm}
+      />
+
+      {/* Edit Dialog */}
+      <EditContactDialog
+        open={!!editingContact}
+        onOpenChange={(open) => !open && setEditingContact(null)}
+        contact={editingContact}
+        onSave={handleEditSave}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedContactIds.length} contact(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The selected contact(s) will be permanently removed 
+              from your address book.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Toaster />
+    </main>
   );
 }
