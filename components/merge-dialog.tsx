@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Contact } from '@/lib/types';
 import {
   Dialog,
@@ -18,6 +18,79 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+
+// Sub-component for single-choice fields
+function FieldRadioGroup({
+  label,
+  options,
+  selectedValue,
+  onValueChange,
+}: {
+  label: string;
+  options: string[];
+  selectedValue: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <Label className="text-sm font-medium mb-2 block">{label}</Label>
+      <RadioGroup
+        value={selectedValue}
+        onValueChange={onValueChange}
+        className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2"
+      >
+        {options.map((option) => (
+          <label
+            key={option}
+            className={cn(
+              "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
+              selectedValue === option ? "bg-primary/10" : "hover:bg-muted/50"
+            )}
+          >
+            <RadioGroupItem value={option} id={`${label}-${option}`} />
+            <span className="text-sm truncate">{option}</span>
+          </label>
+        ))}
+      </RadioGroup>
+    </div>
+  );
+}
+
+// Sub-component for multi-choice fields
+function FieldCheckboxGroup({
+  label,
+  options,
+  selectedValues,
+  onToggle,
+}: {
+  label: string;
+  options: string[];
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <div>
+      <Label className="text-sm font-medium mb-2 block">{label}</Label>
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2">
+        {options.map((option) => (
+          <label
+            key={option}
+            className={cn(
+              "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
+              selectedValues.includes(option) ? "bg-primary/10" : "hover:bg-muted/50"
+            )}
+          >
+            <Checkbox
+              checked={selectedValues.includes(option)}
+              onCheckedChange={() => onToggle(option)}
+            />
+            <span className="text-sm truncate">{option}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface MergeDialogProps {
   open: boolean;
@@ -47,74 +120,45 @@ export function MergeDialog({
     phone: [],
   });
 
-  // Get unique values for each field from included contacts only
-  const getUniqueValues = (field: keyof Contact, contactsToCheck?: Contact[], includedIds?: Set<string>) => {
-    const seen = new Set<string>();
-    const values: string[] = [];
-    const checkContacts = contactsToCheck || contacts;
-    const checkIncluded = includedIds || includedContacts;
-    
-    checkContacts.forEach(contact => {
-      // Only include values from contacts that are included in merge
-      if (!checkIncluded.has(contact.id)) return;
-      
-      const value = contact[field];
-      if (value && typeof value === 'string') {
-        if (!seen.has(value.toLowerCase())) {
-          seen.add(value.toLowerCase());
-          values.push(value);
+  const getUniqueValues = useCallback((field: keyof Contact) => {
+    const valueSet = new Set<string>();
+    contacts.forEach(contact => {
+      if (includedContacts.has(contact.id)) {
+        const value = contact[field];
+        if (value && typeof value === 'string') {
+          valueSet.add(value);
         }
       }
     });
-    
-    return values;
-  };
+    return Array.from(valueSet);
+  }, [contacts, includedContacts]);
 
   // Initialize when dialog opens
   useEffect(() => {
     if (open && contacts.length > 0) {
-      // Include all contacts by default
       const allContactIds = new Set(contacts.map(c => c.id));
       setIncludedContacts(allContactIds);
-      
-      // Get unique values for each field
-      const uniqueNames = getUniqueValues('name', contacts, allContactIds);
-      const uniqueEmails = getUniqueValues('email', contacts, allContactIds);
-      const uniqueCompanies = getUniqueValues('company', contacts, allContactIds);
-      const uniqueJobTitles = getUniqueValues('jobTitle', contacts, allContactIds);
-      const uniquePhones = getUniqueValues('phone', contacts, allContactIds);
-      
-      // Pre-select the first unique value for each field
-      // This ensures consistent behavior - always selects the first option shown
-      setSelectedValues({
-        name: uniqueNames[0] || '',
-        email: uniqueEmails.length > 0 ? [uniqueEmails[0]] : [],
-        company: uniqueCompanies[0] || '',
-        jobTitle: uniqueJobTitles[0] || '',
-        phone: uniquePhones.length > 0 ? [uniquePhones[0]] : [],
-      });
     }
   }, [open, contacts]);
 
-  // Validate selected values when included contacts change
+  // Update choices and default selections when included contacts change
   useEffect(() => {
-    if (!open) return;
-    
-    // Get currently available values
-    const availableNames = new Set(getUniqueValues('name'));
-    const availableEmails = new Set(getUniqueValues('email'));
-    const availableCompanies = new Set(getUniqueValues('company'));
-    const availableJobTitles = new Set(getUniqueValues('jobTitle'));
-    const availablePhones = new Set(getUniqueValues('phone'));
-    
-    setSelectedValues(prev => ({
-      name: availableNames.has(prev.name) ? prev.name : '',
-      email: prev.email.filter(e => availableEmails.has(e)),
-      company: availableCompanies.has(prev.company) ? prev.company : '',
-      jobTitle: availableJobTitles.has(prev.jobTitle) ? prev.jobTitle : '',
-      phone: prev.phone.filter(p => availablePhones.has(p)),
-    }));
-  }, [includedContacts, open, contacts]);
+    if (open) {
+      const uniqueNames = getUniqueValues('name');
+      const uniqueEmails = getUniqueValues('email');
+      const uniqueCompanies = getUniqueValues('company');
+      const uniqueJobTitles = getUniqueValues('jobTitle');
+      const uniquePhones = getUniqueValues('phone');
+
+      setSelectedValues(prev => ({
+        name: uniqueNames.includes(prev.name) ? prev.name : uniqueNames[0] || '',
+        email: prev.email.filter(e => uniqueEmails.includes(e)),
+        company: uniqueCompanies.includes(prev.company) ? prev.company : uniqueCompanies[0] || '',
+        jobTitle: uniqueJobTitles.includes(prev.jobTitle) ? prev.jobTitle : uniqueJobTitles[0] || '',
+        phone: prev.phone.filter(p => uniquePhones.includes(p)),
+      }));
+    }
+  }, [includedContacts, open, getUniqueValues]);
 
   const toggleContactInclusion = (contactId: string) => {
     const newInclusion = new Set(includedContacts);
@@ -238,135 +282,52 @@ export function MergeDialog({
             <Separator />
 
             {/* Name */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Name</Label>
-              <RadioGroup 
-                value={selectedValues.name} 
-                onValueChange={(value) => setSelectedValues(prev => ({ ...prev, name: value }))}
-                className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2"
-              >
-                {nameOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedValues.name === option 
-                        ? "bg-primary/10" 
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value={option} id={`name-${option}`} />
-                    <span className="text-sm truncate">{option}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
+            <FieldRadioGroup
+              label="Name"
+              options={nameOptions}
+              selectedValue={selectedValues.name}
+              onValueChange={(value) => setSelectedValues(prev => ({ ...prev, name: value }))}
+            />
 
             <Separator />
 
             {/* Email */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Email (select all that apply)</Label>
-              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2">
-                {emailOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedValues.email.includes(option)
-                        ? "bg-primary/10" 
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <Checkbox
-                      checked={selectedValues.email.includes(option)}
-                      onCheckedChange={() => handleEmailToggle(option)}
-                    />
-                    <span className="text-sm truncate">{option}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <FieldCheckboxGroup
+              label="Email (select all that apply)"
+              options={emailOptions}
+              selectedValues={selectedValues.email}
+              onToggle={handleEmailToggle}
+            />
 
             <Separator />
 
             {/* Company */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Company</Label>
-              <RadioGroup 
-                value={selectedValues.company} 
-                onValueChange={(value) => setSelectedValues(prev => ({ ...prev, company: value }))}
-                className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2"
-              >
-                {companyOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedValues.company === option 
-                        ? "bg-primary/10" 
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value={option} id={`company-${option}`} />
-                    <span className="text-sm truncate">{option}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
+            <FieldRadioGroup
+              label="Company"
+              options={companyOptions}
+              selectedValue={selectedValues.company}
+              onValueChange={(value) => setSelectedValues(prev => ({ ...prev, company: value }))}
+            />
 
             <Separator />
 
             {/* Job Title */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Job Title</Label>
-              <RadioGroup 
-                value={selectedValues.jobTitle} 
-                onValueChange={(value) => setSelectedValues(prev => ({ ...prev, jobTitle: value }))}
-                className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2"
-              >
-                {jobTitleOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedValues.jobTitle === option 
-                        ? "bg-primary/10" 
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <RadioGroupItem value={option} id={`jobTitle-${option}`} />
-                    <span className="text-sm truncate">{option}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
+            <FieldRadioGroup
+              label="Job Title"
+              options={jobTitleOptions}
+              selectedValue={selectedValues.jobTitle}
+              onValueChange={(value) => setSelectedValues(prev => ({ ...prev, jobTitle: value }))}
+            />
 
             <Separator />
 
             {/* Phone */}
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Phone (select all that apply)</Label>
-              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-2">
-                {phoneOptions.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedValues.phone.includes(option)
-                        ? "bg-primary/10" 
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <Checkbox
-                      checked={selectedValues.phone.includes(option)}
-                      onCheckedChange={() => handlePhoneToggle(option)}
-                    />
-                    <span className="text-sm truncate">{option}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <FieldCheckboxGroup
+              label="Phone (select all that apply)"
+              options={phoneOptions}
+              selectedValues={selectedValues.phone}
+              onToggle={handlePhoneToggle}
+            />
           </div>
 
           {/* Right side - Preview */}

@@ -298,9 +298,51 @@ export const sampleContacts: Contact[] = [
     }
   },
 
+  // Bounced email - user no longer at company
+  {
+    id: '16',
+    name: 'Hans Müller',
+    email: 'h.muller@hamburgsud.com',
+    company: 'Hamburg Süd',
+    jobTitle: 'Logistics Coordinator',
+    phone: '+49 40 3705 0',
+    lastActivity: new Date('2024-10-05'), // Over 2 months ago
+    activityCount: 18,
+    distributionLists: ['Germany Logistics', 'Reefer Shipments'],
+    recentConnections: [
+      { userId: 'u30', userName: 'Klaus Mueller', interactionCount: 10 },
+      { userId: 'u31', userName: 'Greta Schmidt', interactionCount: 8 }
+    ],
+    problem: {
+      type: 'Invalid Email',
+      reason: 'Email bounced on December 15, 2024'
+    }
+  },
+
+  // Bounced email - another user who left their role
+  {
+    id: '17',
+    name: 'Isabelle Dubois',
+    email: 'isabelle.dubois@one.com',
+    company: 'Ocean Network Express (ONE)',
+    jobTitle: 'Customer Service Representative',
+    phone: '+65 6418 8888',
+    lastActivity: new Date('2024-11-20'), // About a month ago
+    activityCount: 25,
+    distributionLists: ['ONE Customer Updates', 'Asia-Europe Trade Lane'],
+    recentConnections: [
+      { userId: 'u16', userName: 'Marie Dubois', interactionCount: 15 },
+      { userId: 'u20', userName: 'Antoine Dupont', interactionCount: 10 }
+    ],
+    problem: {
+      type: 'Invalid Email',
+      reason: 'Email bounced on November 30, 2024'
+    }
+  },
+
   // Clean contact
   {
-    id: '15',
+    id: '18',
     name: 'Olaf Steinberg',
     email: 'o.steinberg@hapag-lloyd.com',
     company: 'Hapag-Lloyd',

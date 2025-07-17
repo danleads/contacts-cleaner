@@ -29,18 +29,21 @@ export function EditContactDialog({
   contact,
   onSave,
 }: EditContactDialogProps) {
+  const [originalEmail, setOriginalEmail] = useState<string | undefined>('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     if (contact) {
-      setEmail(contact.email);
+      setOriginalEmail(contact.email);
+      setEmail(contact.email || '');
       setEmailError('');
     }
   }, [contact]);
 
   const validateEmail = (email: string): boolean => {
-    // Basic email validation
+    // Allows empty string, but validates format if not empty
+    if (email === '') return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -72,15 +75,21 @@ export function EditContactDialog({
     onOpenChange(false);
   };
 
+  const handleRemoveEmail = () => {
+    if (!contact) return;
+    onSave(contact.id, { email: '', problem: undefined });
+    onOpenChange(false);
+  };
+
   if (!contact) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Fix Invalid Email</DialogTitle>
+          <DialogTitle>Edit Email</DialogTitle>
           <DialogDescription>
-            Update the email address to fix the validation issue.
+            Update the email or remove it to resolve the issue.
           </DialogDescription>
         </DialogHeader>
 
@@ -123,8 +132,11 @@ export function EditContactDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!!emailError || !email}>
-            Save Email
+          <Button variant="destructive" onClick={handleRemoveEmail}>
+            Remove Email
+          </Button>
+          <Button onClick={handleSave} disabled={!!emailError || email === originalEmail}>
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

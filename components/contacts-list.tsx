@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronUp, ChevronDown, Trash2, Merge, Edit, CheckCheck, BellOff } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Merge, Edit, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -51,7 +51,7 @@ export function ContactsList({
     const filtered = contacts.filter(contact => {
       const matchesSearch = 
         contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.company?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesProblem = 
@@ -89,9 +89,9 @@ export function ContactsList({
     });
 
     // Sort within each duplicate group
-    duplicateGroups.forEach((group, key) => {
+    duplicateGroups.forEach((group) => {
       group.sort((a, b) => {
-        let aValue: any, bValue: any;
+        let aValue: string | number, bValue: string | number;
         
         switch (sortField) {
           case 'name':
@@ -99,8 +99,8 @@ export function ContactsList({
             bValue = b.name;
             break;
           case 'email':
-            aValue = a.email;
-            bValue = b.email;
+            aValue = a.email || '';
+            bValue = b.email || '';
             break;
           case 'problem':
             aValue = a.problem?.type || '';
@@ -122,7 +122,7 @@ export function ContactsList({
 
     // Sort non-duplicates
     nonDuplicates.sort((a, b) => {
-      let aValue: any, bValue: any;
+      let aValue: string | number, bValue: string | number;
       
       switch (sortField) {
         case 'name':
@@ -130,8 +130,8 @@ export function ContactsList({
           bValue = b.name;
           break;
         case 'email':
-          aValue = a.email;
-          bValue = b.email;
+          aValue = a.email || '';
+          bValue = b.email || '';
           break;
         case 'problem':
           aValue = a.problem?.type || '';
@@ -234,7 +234,7 @@ export function ContactsList({
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full sm:w-64"
             />
-            <Select value={problemFilter} onValueChange={(value: any) => setProblemFilter(value)}>
+            <Select value={problemFilter} onValueChange={(value: ProblemType | 'all') => setProblemFilter(value)}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by problem" />
               </SelectTrigger>
@@ -307,7 +307,7 @@ export function ContactsList({
                         <div className="text-sm text-muted-foreground">{contact.company}</div>
                       )}
                     </TableCell>
-                    <TableCell>{contact.email}</TableCell>
+                    <TableCell>{contact.email || 'No email'}</TableCell>
                     <TableCell>
                       {contact.problem && (
                         <Badge 

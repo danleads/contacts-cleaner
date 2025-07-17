@@ -3,7 +3,7 @@ export type ProblemType = 'Duplicate' | 'Invalid Email';
 export type Contact = {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   company?: string;
   phone?: string;
   jobTitle?: string;

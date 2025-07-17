@@ -26,7 +26,6 @@ import Link from 'next/link';
 export default function Home() {
   const {
     problematicContacts: allProblematicContacts,
-    isLoading,
     updateContact,
     deleteContacts,
     mergeContacts,
@@ -121,19 +120,6 @@ export default function Home() {
     });
   };
 
-  const selectedContactsToMerge = problematicContacts.filter(c => selectedContactIds.includes(c.id));
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading contacts...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
@@ -196,7 +182,7 @@ export default function Home() {
       <MergeDialog
         open={showMergeDialog}
         onOpenChange={setShowMergeDialog}
-        contacts={selectedContactsToMerge}
+        contacts={problematicContacts.filter(c => selectedContactIds.includes(c.id))}
         onMerge={handleMergeConfirm}
       />
 
@@ -232,7 +218,7 @@ export default function Home() {
           <AlertDialogHeader>
             <AlertDialogTitle>Mute this duplicate alert?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will prevent these {selectedContactIds.length} contact(s) from being flagged as duplicates of each other in the future. You can reverse this action at any time from the 'Muted Alerts' page.
+              This will prevent these {selectedContactIds.length} contact(s) from being flagged as duplicates of each other in the future. You can reverse this action at any time from the &apos;Muted Alerts&apos; page.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -6,7 +6,6 @@ import { ArrowLeft, BellOff, Trash2 } from 'lucide-react';
 import { useMuteRules } from '@/hooks/use-mute-rules';
 import { useContacts } from '@/hooks/use-contacts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 export default function MutedAlertsPage() {
   const { muteRules, removeMuteRule, isLoading: isLoadingRules } = useMuteRules();
@@ -44,7 +43,7 @@ export default function MutedAlertsPage() {
           <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg">
             <BellOff className="w-12 h-12 mx-auto mb-4" />
             <h2 className="text-xl font-semibold">No Muted Alerts</h2>
-            <p>You haven't muted any duplicate alerts yet.</p>
+            <p>You haven&apos;t muted any duplicate alerts yet. When you do, they will appear here.</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
