@@ -46,7 +46,41 @@ export function useContacts() {
   };
 
   const deleteContacts = (ids: string[]) => {
-    setContacts(prev => prev.filter(contact => !ids.includes(contact.id)));
+    setContacts(prev => {
+      const deletedIds = new Set(ids);
+
+      // First, update the related contacts that are NOT being deleted
+      const updatedContacts = prev.map(contact => {
+        if (deletedIds.has(contact.id)) {
+          return contact; // Keep it for now, will filter later
+        }
+
+        if (contact.problem?.type === 'Duplicate' && contact.problem.relatedContactIds) {
+          const newRelatedIds = contact.problem.relatedContactIds.filter(
+            relatedId => !deletedIds.has(relatedId)
+          );
+
+          // If the contact no longer has any related duplicates, it's not a problem anymore.
+          if (newRelatedIds.length === 0) {
+            const { problem, ...rest } = contact;
+            return { ...rest, problem: undefined };
+          }
+          
+          // If the list of related IDs has changed, update it.
+          if (newRelatedIds.length < contact.problem.relatedContactIds.length) {
+            return {
+              ...contact,
+              problem: { ...contact.problem, relatedContactIds: newRelatedIds },
+            };
+          }
+        }
+        
+        return contact;
+      });
+
+      // Finally, remove the deleted contacts from the list
+      return updatedContacts.filter(contact => !deletedIds.has(contact.id));
+    });
   };
 
   const mergeContacts = (primaryId: string, mergedIds: string[], mergedData: Partial<Contact>) => {
