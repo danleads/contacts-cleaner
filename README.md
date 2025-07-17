@@ -129,6 +129,10 @@ npm run build
 npm start
 ```
 
+## 🚀 Deployment
+
+This project is configured for continuous deployment with Netlify. Any push to the `main` branch on GitHub will automatically trigger a new build and deploy the latest version of the application.
+
 ## 📝 Notes
 
 - This is a prototype demonstrating front-end capabilities
