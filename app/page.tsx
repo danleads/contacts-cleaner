@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useContacts } from '@/hooks/use-contacts';
+import { useMuteRules } from '@/hooks/use-mute-rules';
 import { ContactsList } from '@/components/contacts-list';
 import { MergeDialog } from '@/components/merge-dialog';
 import { EditContactDialog } from '@/components/edit-contact-dialog';
@@ -19,11 +20,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Contact } from '@/lib/types';
-import { RefreshCw, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Bell } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const {
-    problematicContacts,
+    problematicContacts: allProblematicContacts,
     isLoading,
     updateContact,
     deleteContacts,
@@ -31,6 +33,7 @@ export default function Home() {
     clearProblems,
     resetToSampleData,
   } = useContacts();
+  const { muteRules, addMuteRule } = useMuteRules();
 
   const { toast } = useToast();
   
@@ -38,6 +41,12 @@ export default function Home() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showIgnoreConfirm, setShowIgnoreConfirm] = useState(false);
+
+  const problematicContacts = useMemo(() => {
+    const mutedContactIds = new Set(muteRules.flatMap(rule => rule.contactIds));
+    return allProblematicContacts.filter(contact => !mutedContactIds.has(contact.id));
+  }, [allProblematicContacts, muteRules]);
 
   const handleMerge = (contactIds: string[]) => {
     const contactsToMerge = problematicContacts.filter(c => contactIds.includes(c.id));
@@ -58,6 +67,7 @@ export default function Home() {
       description: `${mergedIds.length + 1} contacts have been merged into one.${excludedIds.length > 0 ? ` ${excludedIds.length} contact(s) marked as reviewed.` : ''}`,
     });
     setShowMergeDialog(false);
+    setSelectedContactIds([]);
   };
 
   const handleDelete = (contactIds: string[]) => {
@@ -72,6 +82,22 @@ export default function Home() {
       description: `${selectedContactIds.length} contact(s) have been removed.`,
     });
     setShowDeleteConfirm(false);
+    setSelectedContactIds([]);
+  };
+
+  const handleIgnore = (contactIds: string[]) => {
+    setSelectedContactIds(contactIds);
+    setShowIgnoreConfirm(true);
+  };
+
+  const handleIgnoreConfirm = () => {
+    addMuteRule(selectedContactIds);
+    toast({
+      title: "Alert muted",
+      description: "A rule has been created to prevent future duplicate alerts for these contacts.",
+    });
+    setShowIgnoreConfirm(false);
+    setSelectedContactIds([]);
   };
 
   const handleEdit = (contact: Contact) => {
@@ -119,10 +145,18 @@ export default function Home() {
                 Maintain a single source of truth for your contacts
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Reset to Sample Data
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/muted">
+                  <Bell className="w-4 h-4 mr-2" />
+                  View Muted Alerts
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReset}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reset to Sample Data
+              </Button>
+            </div>
           </div>
           
           {problematicContacts.length === 0 ? (
@@ -151,6 +185,7 @@ export default function Home() {
                 onMerge={handleMerge}
                 onDelete={handleDelete}
                 onEdit={handleEdit}
+                onIgnore={handleIgnore}
               />
             </>
           )}
@@ -188,6 +223,21 @@ export default function Home() {
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showIgnoreConfirm} onOpenChange={setShowIgnoreConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mute this duplicate alert?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will prevent these {selectedContactIds.length} contact(s) from being flagged as duplicates of each other in the future. You can reverse this action at any time from the 'Muted Alerts' page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleIgnoreConfirm}>Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
